@@ -1,4 +1,5 @@
-# negroni-oauth2 [![wercker status](https://app.wercker.com/status/cfc6a7d08ba203b6d40aa0b3bd69b477/s/ "wercker status")](https://app.wercker.com/project/bykey/cfc6a7d08ba203b6d40aa0b3bd69b477)
+# negroni-oauth2 [![GoDoc](https://godoc.org/github.com/GoIncremental/negroni-oauth2?status.svg)](http://godoc.org/github.com/GoIncremental/negroni-oauth2) [![wercker status](https://app.wercker.com/status/3dec6e8ae34f8069700c83837077f115/s "wercker status")](https://app.wercker.com/project/bykey/3dec6e8ae34f8069700c83837077f115)
+
 
 Allows your Negroni application to support user login via an OAuth 2.0 backend. Requires [`negroni-sessions`](https://github.com/goincremental/negroni-sessions) middleware.
 
