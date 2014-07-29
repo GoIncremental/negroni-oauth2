@@ -1,14 +1,17 @@
-# negroni-oauth2 [![wercker status](https://app.wercker.com/status/cfc6a7d08ba203b6d40aa0b3bd69b477/s/ "wercker status")](https://app.wercker.com/project/bykey/cfc6a7d08ba203b6d40aa0b3bd69b477)
+// Copyright 2014 GoIncremental Limited. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-Allows your Negroni application to support user login via an OAuth 2.0 backend. Requires [`negroni-sessions`](https://github.com/goincremental/negroni-sessions) middleware.
-
-Google, Facebook, LinkedIn and Github sign-in are currently supported.
-
-Once endpoints are provided, this middleware can work with any OAuth 2.0 backend.
-
-## Usage
-
-~~~ go
 package main
 
 import (
@@ -67,25 +70,3 @@ func main() {
 
 	n.Run(":3000")
 }
-~~~
-
-## Auth flow
-
-* `/login` will redirect user to the OAuth 2.0 provider's permissions dialog. If there is a `next` query param provided, user is redirected to the next page afterwards.
-* If user agrees to connect, OAuth 2.0 provider will redirect to `/oauth2callback` to let your app to make the handshake. You need to register `/oauth2callback` as a Redirect URL in your application settings.
-* `/logout` will log the user out. If there is a `next` query param provided, user is redirected to the next page afterwards.
-
-You can customize the login, logout, oauth2callback and error paths:
-
-~~~ go
-oauth2.PathLogin = "/oauth2login"
-oauth2.PathLogout = "/oauth2logout"
-...
-~~~
-
-## Authors
-* [David Bochenski](http://github.com/bochenski)
-
-## Derived from [martini-contrib/oauth2](http://github.com/martini-contrib/oauth2)
-
-* [Burcu Dogan](http://github.com/rakyll)
