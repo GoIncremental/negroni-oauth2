@@ -15,7 +15,7 @@
 // Package oauth2_test contains tests for the oauth2 package
 // user login via an OAuth 2.0 backend.
 
-package oauth2_test
+package oauth2
 
 import (
 	"fmt"
@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/codegangsta/negroni"
-	"github.com/goincremental/negroni-oauth"
 	"github.com/goincremental/negroni-sessions"
 )
 
@@ -32,7 +31,7 @@ func Test_LoginRedirect(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(oauth2.Google(&oauth2.Options{
+	n.Use(Google(&Options{
 		ClientID:     "client_id",
 		ClientSecret: "client_secret",
 		RedirectURL:  "refresh_url",
@@ -46,7 +45,7 @@ func Test_LoginRedirect(t *testing.T) {
 	if recorder.Code != 302 {
 		t.Errorf("Not being redirected to the auth page.")
 	}
-	if location != "https://accounts.google.com/o/oauth2/auth?access_type=&approval_prompt=&client_id=client_id&redirect_uri=refresh_url&response_type=code&scope=x+y&state=%2F" {
+	if location != "https://accounts.google.com/o/oauth2/auth?client_id=client_id&redirect_uri=refresh_url&response_type=code&scope=x+y&state=%2F" {
 		t.Errorf("Not being redirected to the right page, %v found", location)
 	}
 }
@@ -55,14 +54,14 @@ func Test_LoginRedirectAfterLoginRequired(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(oauth2.Google(&oauth2.Options{
+	n.Use(Google(&Options{
 		ClientID:     "client_id",
 		ClientSecret: "client_secret",
 		RedirectURL:  "refresh_url",
 		Scopes:       []string{"x", "y"},
 	}))
 
-	n.Use(oauth2.LoginRequired())
+	n.Use(LoginRequired())
 
 	mux := http.NewServeMux()
 
@@ -91,7 +90,7 @@ func Test_Logout(t *testing.T) {
 
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", s))
-	n.Use(oauth2.Google(&oauth2.Options{
+	n.Use(Google(&Options{
 		ClientID:     "foo",
 		ClientSecret: "foo",
 		RedirectURL:  "foo",
@@ -100,12 +99,12 @@ func Test_Logout(t *testing.T) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		oauth2.SetToken(req, "dummy token")
+		SetToken(req, "dummy token")
 		fmt.Fprintf(w, "OK")
 	})
 
 	mux.HandleFunc("/get", func(w http.ResponseWriter, req *http.Request) {
-		tok := oauth2.GetToken(req)
+		tok := GetToken(req)
 		if tok != nil {
 			t.Errorf("User credentials are still kept in the session.")
 		}
@@ -130,7 +129,7 @@ func Test_LogoutOnAccessTokenExpiration(t *testing.T) {
 
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", s))
-	n.Use(oauth2.Google(&oauth2.Options{
+	n.Use(Google(&Options{
 		ClientID:     "foo",
 		ClientSecret: "foo",
 		RedirectURL:  "foo",
@@ -138,12 +137,12 @@ func Test_LogoutOnAccessTokenExpiration(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/addtoken", func(w http.ResponseWriter, req *http.Request) {
-		oauth2.SetToken(req, "dummy token")
+		SetToken(req, "dummy token")
 		fmt.Fprintf(w, "OK")
 	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		tok := oauth2.GetToken(req)
+		tok := GetToken(req)
 		if tok != nil {
 			t.Errorf("User not logged out although access token is expired. %v\n", tok)
 		}
@@ -159,13 +158,13 @@ func Test_LoginRequired(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(oauth2.Google(&oauth2.Options{
+	n.Use(Google(&Options{
 		ClientID:     "foo",
 		ClientSecret: "foo",
 		RedirectURL:  "foo",
 	}))
 
-	n.Use(oauth2.LoginRequired())
+	n.Use(LoginRequired())
 
 	mux := http.NewServeMux()
 
