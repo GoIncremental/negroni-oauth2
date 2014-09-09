@@ -153,12 +153,10 @@ func LinkedIn(opts *Options) negroni.Handler {
 func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerFunc {
 
 	options := &oauth2.Options{
-		ClientID:       opts.ClientID,
-		ClientSecret:   opts.ClientSecret,
-		RedirectURL:    opts.RedirectURL,
-		Scopes:         opts.Scopes,
-		AccessType:     opts.AccessType,
-		ApprovalPrompt: opts.ApprovalPrompt,
+		ClientID:     opts.ClientID,
+		ClientSecret: opts.ClientSecret,
+		RedirectURL:  opts.RedirectURL,
+		Scopes:       opts.Scopes,
 	}
 
 	config, err := oauth2.NewConfig(options, authUrl, tokenUrl)
@@ -172,7 +170,7 @@ func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerF
 		if r.Method == "GET" {
 			switch r.URL.Path {
 			case PathLogin:
-				login(config, s, rw, r)
+				login(opts, config, s, rw, r)
 			case PathLogout:
 				logout(s, rw, r)
 			case PathCallback:
@@ -230,14 +228,14 @@ func LoginRequired() negroni.HandlerFunc {
 	}
 }
 
-func login(c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func login(opts *Options, c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get(keyNextPage))
 	if s.Get(keyToken) == nil {
 		// User is not logged in.
 		if next == "" {
 			next = "/"
 		}
-		http.Redirect(w, r, c.AuthCodeURL(next), http.StatusFound)
+		http.Redirect(w, r, c.AuthCodeURL(next, opts.AccessType, opts.ApprovalPrompt), http.StatusFound)
 		return
 	}
 	// No need to login, redirect to the next page.
