@@ -220,6 +220,8 @@ func LoginRequired() negroni.HandlerFunc {
 		s := sessions.GetSession(r)
 		token := unmarshallToken(s)
 		if token == nil || token.IsExpired() {
+			// Set token to null to avoid redirection loop
+			SetToken(r, nil)
 			next := url.QueryEscape(r.URL.RequestURI())
 			http.Redirect(rw, r, PathLogin+"?next="+next, http.StatusFound)
 		} else {
