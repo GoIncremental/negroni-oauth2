@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	keyToken    = "oauth2_token"
-	keyNextPage = "next"
+	codeRedirect = 302
+	keyToken     = "oauth2_token"
+	keyNextPage  = "next"
 )
 
 var (
@@ -80,17 +81,12 @@ type Options struct {
 type Tokens interface {
 	Access() string
 	Refresh() string
-	IsExpired() bool
+	Expired() bool
 	ExpiryTime() time.Time
-	ExtraData() map[string]string
 }
 
 type token struct {
 	oauth2.Token
-}
-
-func (t *token) ExtraData() map[string]string {
-	return t.Extra
 }
 
 // Returns the access token.
@@ -105,11 +101,11 @@ func (t *token) Refresh() string {
 
 // Returns whether the access token is
 // expired or not.
-func (t *token) IsExpired() bool {
+func (t *token) Expired() bool {
 	if t == nil {
 		return true
 	}
-	return t.Expired()
+	return t.Token.Expired()
 }
 
 // Returns the expiry time of the user's
@@ -118,48 +114,45 @@ func (t *token) ExpiryTime() time.Time {
 	return t.Expiry
 }
 
-// // Formats tokens into string.
-// func (t *token) String() string {
-// 	return fmt.Sprintf("tokens: %v", t)
-// }
-
-// Returns a new Google OAuth 2.0 backend endpoint.
-func Google(opts *Options) negroni.Handler {
-	authUrl := "https://accounts.google.com/o/oauth2/auth"
-	tokenUrl := "https://accounts.google.com/o/oauth2/token"
-	return NewOAuth2Provider(opts, authUrl, tokenUrl)
+// String returns the string representation of the token.
+func (t *token) String() string {
+	return fmt.Sprintf("tokens: %v", t)
 }
 
-// Returns a new Github OAuth 2.0 backend endpoint.
-func Github(opts *Options) negroni.Handler {
-	authUrl := "https://github.com/login/oauth/authorize"
-	tokenUrl := "https://github.com/login/oauth/access_token"
-	return NewOAuth2Provider(opts, authUrl, tokenUrl)
+// Google returns a new Google OAuth 2.0 backend endpoint.
+func Google(opt ...oauth2.Option) negroni.Handler {
+	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
+		"https://accounts.google.com/o/oauth2/auth",
+		"https://accounts.google.com/o/oauth2/token"),
+	))
 }
 
-func Facebook(opts *Options) negroni.Handler {
-	authUrl := "https://www.facebook.com/dialog/oauth"
-	tokenUrl := "https://graph.facebook.com/oauth/access_token"
-	return NewOAuth2Provider(opts, authUrl, tokenUrl)
+// Github returns a new Github OAuth 2.0 backend endpoint.
+func Github(opt ...oauth2.Option) negroni.Handler {
+	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
+		"https://github.com/login/oauth/authorize",
+		"https://github.com/login/oauth/access_token"),
+	))
 }
 
-func LinkedIn(opts *Options) negroni.Handler {
-	authUrl := "https://www.linkedin.com/uas/oauth2/authorization"
-	tokenUrl := "https://www.linkedin.com/uas/oauth2/accessToken"
-	return NewOAuth2Provider(opts, authUrl, tokenUrl)
+func Facebook(opt ...oauth2.Option) negroni.Handler {
+	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
+		"https://www.facebook.com/dialog/oauth",
+		"https://graph.facebook.com/oauth/access_token"),
+	))
+}
+
+func LinkedIn(opt ...oauth2.Option) negroni.Handler {
+	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
+		"https://www.linkedin.com/uas/oauth2/authorization",
+		"https://www.linkedin.com/uas/oauth2/accessToken"),
+	))
 }
 
 // Returns a generic OAuth 2.0 backend endpoint.
-func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerFunc {
+func NewOAuth2Provider(opts []oauth2.Option) negroni.HandlerFunc {
 
-	options := &oauth2.Options{
-		ClientID:     opts.ClientID,
-		ClientSecret: opts.ClientSecret,
-		RedirectURL:  opts.RedirectURL,
-		Scopes:       opts.Scopes,
-	}
-
-	config, err := oauth2.NewConfig(options, authUrl, tokenUrl)
+	config, err := oauth2.New(opts...)
 	if err != nil {
 		panic(fmt.Sprintf("oauth2: %s", err))
 	}
@@ -206,7 +199,7 @@ func SetToken(r *http.Request, t interface{}) {
 	tk := unmarshallToken(s)
 	if tk != nil {
 		// check if the access token is expired
-		if tk.IsExpired() && tk.Refresh() == "" {
+		if tk.Expired() && tk.Refresh() == "" {
 			s.Delete(keyToken)
 			tk = nil
 		}
@@ -219,7 +212,7 @@ func LoginRequired() negroni.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 		s := sessions.GetSession(r)
 		token := unmarshallToken(s)
-		if token == nil || token.IsExpired() {
+		if token == nil || token.Expired() {
 			// Set token to null to avoid redirection loop
 			SetToken(r, nil)
 			next := url.QueryEscape(r.URL.RequestURI())
@@ -230,14 +223,14 @@ func LoginRequired() negroni.HandlerFunc {
 	}
 }
 
-func login(opts *Options, c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func login(opts []oauth2.Option, c *oauth2.Flow, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get(keyNextPage))
 	if s.Get(keyToken) == nil {
 		// User is not logged in.
 		if next == "" {
 			next = "/"
 		}
-		http.Redirect(w, r, c.AuthCodeURL(next, opts.AccessType, opts.ApprovalPrompt), http.StatusFound)
+		http.Redirect(w, r, c.AuthCodeURL(next, "", ""), http.StatusFound)
 		return
 	}
 	// No need to login, redirect to the next page.
@@ -250,10 +243,10 @@ func logout(s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusFound)
 }
 
-func handleOAuth2Callback(c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func handleOAuth2Callback(c *oauth2.Flow, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get("state"))
 	code := r.URL.Query().Get("code")
-	t, err := c.NewTransportWithCode(code)
+	t, err := c.NewTransportFromCode(code)
 	if err != nil {
 		// Pass the error message, or allow dev to provide its own
 		// error handler.
