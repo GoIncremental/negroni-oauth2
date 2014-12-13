@@ -90,7 +90,7 @@ type token struct {
 }
 
 func (t *token) ExtraData() map[string]string {
-	return t.Extra
+	return t.ExtraData()
 }
 
 // Returns the access token.
@@ -152,14 +152,19 @@ func LinkedIn(opts *Options) negroni.Handler {
 // Returns a generic OAuth 2.0 backend endpoint.
 func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerFunc {
 
-	options := &oauth2.Options{
-		ClientID:     opts.ClientID,
-		ClientSecret: opts.ClientSecret,
-		RedirectURL:  opts.RedirectURL,
-		Scopes:       opts.Scopes,
-	}
-
-	config, err := oauth2.NewConfig(options, authUrl, tokenUrl)
+	// options := &oauth2.Options{
+	// 	ClientID:     opts.ClientID,
+	// 	ClientSecret: opts.ClientSecret,
+	// 	RedirectURL:  opts.RedirectURL,
+	// 	Scopes:       opts.Scopes,
+	// }
+	options, err := oauth2.New(
+		oauth2.Client(opts.ClientID, opts.ClientSecret),
+		oauth2.RedirectURL(opts.RedirectURL),
+		oauth2.Scope(opts.Scopes...),
+		oauth2.Endpoint(authUrl, tokenUrl),
+	)
+	// config, err := oauth2.NewConfig(options, authUrl, tokenUrl)
 	if err != nil {
 		panic(fmt.Sprintf("oauth2: %s", err))
 	}
@@ -170,11 +175,11 @@ func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerF
 		if r.Method == "GET" {
 			switch r.URL.Path {
 			case PathLogin:
-				login(opts, config, s, rw, r)
+				login(opts, options, s, rw, r)
 			case PathLogout:
 				logout(s, rw, r)
 			case PathCallback:
-				handleOAuth2Callback(config, s, rw, r)
+				handleOAuth2Callback(opts, options, s, rw, r)
 			default:
 				next(rw, r)
 			}
@@ -230,14 +235,14 @@ func LoginRequired() negroni.HandlerFunc {
 	}
 }
 
-func login(opts *Options, c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func login(opts *Options, options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get(keyNextPage))
 	if s.Get(keyToken) == nil {
 		// User is not logged in.
 		if next == "" {
 			next = "/"
 		}
-		http.Redirect(w, r, c.AuthCodeURL(next, opts.AccessType, opts.ApprovalPrompt), http.StatusFound)
+		http.Redirect(w, r, options.AuthCodeURL(next, opts.AccessType, opts.ApprovalPrompt), http.StatusFound)
 		return
 	}
 	// No need to login, redirect to the next page.
@@ -250,10 +255,10 @@ func logout(s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusFound)
 }
 
-func handleOAuth2Callback(c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func handleOAuth2Callback(opts *Options, options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get("state"))
 	code := r.URL.Query().Get("code")
-	t, err := c.NewTransportWithCode(code)
+	t, err := options.NewTransportFromCode(code)
 	if err != nil {
 		// Pass the error message, or allow dev to provide its own
 		// error handler.
