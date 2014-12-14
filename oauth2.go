@@ -253,13 +253,15 @@ func logout(s sessions.Session, w http.ResponseWriter, r *http.Request) {
 func handleOAuth2Callback(c *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get("state"))
 	code := r.URL.Query().Get("code")
+
 	t, err := c.NewTransportWithCode(code)
-	if err != nil {
+	if code == "" || err != nil {
 		// Pass the error message, or allow dev to provide its own
 		// error handler.
 		http.Redirect(w, r, PathError, http.StatusFound)
 		return
 	}
+
 	// Store the credentials in the session.
 	val, _ := json.Marshal(t.Token())
 	s.Set(keyToken, val)
