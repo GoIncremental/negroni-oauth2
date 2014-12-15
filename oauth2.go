@@ -157,7 +157,8 @@ func LinkedIn(opt ...oauth2.Option) negroni.Handler {
 // Returns a generic OAuth 2.0 backend endpoint.
 func NewOAuth2Provider(opts []oauth2.Option) negroni.HandlerFunc {
 
-	config, err := oauth2.New(opts...)
+	options, err := oauth2.New(opts...)
+
 	if err != nil {
 		panic(fmt.Sprintf("oauth2: %s", err))
 	}
@@ -168,11 +169,11 @@ func NewOAuth2Provider(opts []oauth2.Option) negroni.HandlerFunc {
 		if r.Method == "GET" {
 			switch r.URL.Path {
 			case PathLogin:
-				login(opts, config, s, rw, r)
+				login(opts, options, s, rw, r)
 			case PathLogout:
 				logout(s, rw, r)
 			case PathCallback:
-				handleOAuth2Callback(config, s, rw, r)
+				handleOAuth2Callback(options, s, rw, r)
 			default:
 				next(rw, r)
 			}
@@ -228,14 +229,14 @@ func LoginRequired() negroni.HandlerFunc {
 	}
 }
 
-func login(opts []oauth2.Option, c *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func login(opts []oauth2.Option, options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get(keyNextPage))
 	if s.Get(keyToken) == nil {
 		// User is not logged in.
 		if next == "" {
 			next = "/"
 		}
-		http.Redirect(w, r, c.AuthCodeURL(next, "", ""), http.StatusFound)
+		http.Redirect(w, r, options.AuthCodeURL(next, "", ""), http.StatusFound)
 		return
 	}
 	// No need to login, redirect to the next page.
@@ -248,12 +249,13 @@ func logout(s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusFound)
 }
 
-func handleOAuth2Callback(o *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func handleOAuth2Callback(options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get("state"))
 	code := r.URL.Query().Get("code")
 
-	t, err := o.NewTransportFromCode(code)
-	if code == "" || err != nil {
+	t, err := options.NewTransportFromCode(code)
+
+	if err != nil {
 		// Pass the error message, or allow dev to provide its own
 		// error handler.
 		http.Redirect(w, r, PathError, http.StatusFound)
