@@ -17,8 +17,9 @@ import (
 	"net/http"
 
 	"github.com/codegangsta/negroni"
-	"github.com/goincremental/negroni-oauth2"
-	"github.com/goincremental/negroni-sessions"
+	oauth2 "github.com/goincremental/negroni-oauth2"
+	sessions "github.com/goincremental/negroni-sessions"
+	goauth2 "github.com/golang/oauth2"
 )
 
 func main() {
@@ -40,12 +41,11 @@ func main() {
 
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(oauth2.Google(&oauth2.Options{
-		ClientID:     "client_id",
-		ClientSecret: "client_secret",
-		RedirectURL:  "redirect_url",
-		Scopes:       []string{"email"},
-	}))
+	n.Use(oauth2.Google(
+		goauth2.Client("client_id", "client_secret"),
+		goauth2.RedirectURL("redirect_url"),
+		goauth2.Scope("https://www.googleapis.com/auth/drive"),
+	))
 
 	router := http.NewServeMux()
 
