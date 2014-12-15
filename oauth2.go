@@ -18,6 +18,8 @@
 package oauth2
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -36,14 +38,14 @@ const (
 )
 
 var (
-	// Path to handle OAuth 2.0 logins.
+	// PathLogin sets the path to handle OAuth 2.0 logins.
 	PathLogin = "/login"
-	// Path to handle OAuth 2.0 logouts.
+	// PathLogout sets to handle OAuth 2.0 logouts.
 	PathLogout = "/logout"
-	// Path to handle callback from OAuth 2.0 backend
+	// PathCallback sets the path to handle callback from OAuth 2.0 backend
 	// to exchange credentials.
 	PathCallback = "/oauth2callback"
-	// Path to handle error cases.
+	// PathError sets the path to handle error cases.
 	PathError = "/oauth2error"
 )
 
@@ -62,21 +64,9 @@ type Options struct {
 
 	// Optional, identifies the level of access being requested.
 	Scopes []string `json:"scopes"`
-
-	// Optional, "online" (default) or "offline", no refresh token if "online"
-	AccessType string `json:"omit"`
-
-	// ApprovalPrompt indicates whether the user should be
-	// re-prompted for consent. If set to "auto" (default) the
-	// user will be prompted only if they haven't previously
-	// granted consent and the code can only be exchanged for an
-	// access token.
-	// If set to "force" the user will always be prompted, and the
-	// code can be exchanged for a refresh token.
-	ApprovalPrompt string `json:"omit"`
 }
 
-// Represents a container that contains
+// Tokens Represents a container that contains
 // user's OAuth 2.0 access and refresh tokens.
 type Tokens interface {
 	Access() string
@@ -216,8 +206,7 @@ func SetToken(r *http.Request, t interface{}) {
 // if user is not logged in.
 func LoginRequired() negroni.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-		s := sessions.GetSession(r)
-		token := unmarshallToken(s)
+		token := GetToken(r)
 		if token == nil || token.Expired() {
 			// Set token to null to avoid redirection loop
 			SetToken(r, nil)
@@ -229,6 +218,15 @@ func LoginRequired() negroni.HandlerFunc {
 	}
 }
 
+func newState() string {
+	var p [16]byte
+	_, err := rand.Read(p[:])
+	if err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(p[:])
+}
+
 func login(opts []oauth2.Option, options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get(keyNextPage))
 	if s.Get(keyToken) == nil {
@@ -236,7 +234,7 @@ func login(opts []oauth2.Option, options *oauth2.Options, s sessions.Session, w 
 		if next == "" {
 			next = "/"
 		}
-		http.Redirect(w, r, options.AuthCodeURL(next, "", ""), http.StatusFound)
+		http.Redirect(w, r, options.AuthCodeURL(newState(), "online", "auto"), http.StatusFound)
 		return
 	}
 	// No need to login, redirect to the next page.
