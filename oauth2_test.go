@@ -24,19 +24,19 @@ import (
 	"testing"
 
 	"github.com/codegangsta/negroni"
-	"github.com/goincremental/negroni-sessions"
+	sessions "github.com/goincremental/negroni-sessions"
+	goauth2 "github.com/golang/oauth2"
 )
 
 func Test_LoginRedirect(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(Google(&Options{
-		ClientID:     "client_id",
-		ClientSecret: "client_secret",
-		RedirectURL:  "refresh_url",
-		Scopes:       []string{"x", "y"},
-	}))
+	n.Use(Google(
+		goauth2.Client("client_id", "client_secret"),
+		goauth2.RedirectURL("refresh_url"),
+		goauth2.Scope("x", "y"),
+	))
 
 	r, _ := http.NewRequest("GET", "/login", nil)
 	n.ServeHTTP(recorder, r)
@@ -54,12 +54,11 @@ func Test_LoginRedirectAfterLoginRequired(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(Google(&Options{
-		ClientID:     "client_id",
-		ClientSecret: "client_secret",
-		RedirectURL:  "refresh_url",
-		Scopes:       []string{"x", "y"},
-	}))
+	n.Use(Google(
+		goauth2.Client("client_id", "client_secret"),
+		goauth2.RedirectURL("refresh_url"),
+		goauth2.Scope("x", "y"),
+	))
 
 	n.Use(LoginRequired())
 
@@ -90,11 +89,10 @@ func Test_Logout(t *testing.T) {
 
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", s))
-	n.Use(Google(&Options{
-		ClientID:     "foo",
-		ClientSecret: "foo",
-		RedirectURL:  "foo",
-	}))
+	n.Use(Google(
+		goauth2.Client("foo", "foo"),
+		goauth2.RedirectURL("foo"),
+	))
 
 	mux := http.NewServeMux()
 
@@ -129,11 +127,10 @@ func Test_LogoutOnAccessTokenExpiration(t *testing.T) {
 
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", s))
-	n.Use(Google(&Options{
-		ClientID:     "foo",
-		ClientSecret: "foo",
-		RedirectURL:  "foo",
-	}))
+	n.Use(Google(
+		goauth2.Client("foo", "foo"),
+		goauth2.RedirectURL("foo"),
+	))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/addtoken", func(w http.ResponseWriter, req *http.Request) {
@@ -158,11 +155,10 @@ func Test_LoginRequired(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(Google(&Options{
-		ClientID:     "foo",
-		ClientSecret: "foo",
-		RedirectURL:  "foo",
-	}))
+	n.Use(Google(
+		goauth2.Client("foo", "foo"),
+		goauth2.RedirectURL("foo"),
+	))
 
 	n.Use(LoginRequired())
 
