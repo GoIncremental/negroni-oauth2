@@ -114,43 +114,42 @@ func (t *token) String() string {
 	return fmt.Sprintf("tokens: %v", t)
 }
 
-// Google returns a new Google OAuth 2.0 backend endpoint.
-func Google(opt ...oauth2.Option) negroni.Handler {
-	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
-		"https://accounts.google.com/o/oauth2/auth",
-		"https://accounts.google.com/o/oauth2/token"),
-	))
+// Returns a new Google OAuth 2.0 backend endpoint.
+func Google(opts *Options) negroni.Handler {
+	authUrl := "https://accounts.google.com/o/oauth2/auth"
+	tokenUrl := "https://accounts.google.com/o/oauth2/token"
+	return NewOAuth2Provider(opts, authUrl, tokenUrl)
 }
 
-// Github returns a new Github OAuth 2.0 backend endpoint.
-func Github(opt ...oauth2.Option) negroni.Handler {
-	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
-		"https://github.com/login/oauth/authorize",
-		"https://github.com/login/oauth/access_token"),
-	))
+// Returns a new Github OAuth 2.0 backend endpoint.
+func Github(opts *Options) negroni.Handler {
+	authUrl := "https://github.com/login/oauth/authorize"
+	tokenUrl := "https://github.com/login/oauth/access_token"
+	return NewOAuth2Provider(opts, authUrl, tokenUrl)
 }
 
-func Facebook(opt ...oauth2.Option) negroni.Handler {
-	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
-		"https://www.facebook.com/dialog/oauth",
-		"https://graph.facebook.com/oauth/access_token"),
-	))
+func Facebook(opts *Options) negroni.Handler {
+	authUrl := "https://www.facebook.com/dialog/oauth"
+	tokenUrl := "https://graph.facebook.com/oauth/access_token"
+	return NewOAuth2Provider(opts, authUrl, tokenUrl)
 }
 
-func LinkedIn(opt ...oauth2.Option) negroni.Handler {
-	return NewOAuth2Provider(append(opt, oauth2.Endpoint(
-		"https://www.linkedin.com/uas/oauth2/authorization",
-		"https://www.linkedin.com/uas/oauth2/accessToken"),
-	))
+func LinkedIn(opts *Options) negroni.Handler {
+	authUrl := "https://www.linkedin.com/uas/oauth2/authorization"
+	tokenUrl := "https://www.linkedin.com/uas/oauth2/accessToken"
+	return NewOAuth2Provider(opts, authUrl, tokenUrl)
 }
 
 // Returns a generic OAuth 2.0 backend endpoint.
-func NewOAuth2Provider(opts []oauth2.Option) negroni.HandlerFunc {
-
-	options, err := oauth2.New(opts...)
-
-	if err != nil {
-		panic(fmt.Sprintf("oauth2: %s", err))
+func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerFunc {
+	config := &oauth2.Config{
+		ClientID:     opts.ClientID,
+		ClientSecret: opts.ClientSecret,
+		Scopes:       opts.Scopes,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  authUrl,
+			TokenURL: tokenUrl,
+		},
 	}
 
 	return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -159,11 +158,11 @@ func NewOAuth2Provider(opts []oauth2.Option) negroni.HandlerFunc {
 		if r.Method == "GET" {
 			switch r.URL.Path {
 			case PathLogin:
-				login(opts, options, s, rw, r)
+				login(opts, config, s, rw, r)
 			case PathLogout:
 				logout(s, rw, r)
 			case PathCallback:
-				handleOAuth2Callback(options, s, rw, r)
+				handleOAuth2Callback(opts, config, s, rw, r)
 			default:
 				next(rw, r)
 			}
@@ -227,14 +226,14 @@ func newState() string {
 	return hex.EncodeToString(p[:])
 }
 
-func login(opts []oauth2.Option, options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func login(opts *Options, config *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get(keyNextPage))
 	if s.Get(keyToken) == nil {
 		// User is not logged in.
 		if next == "" {
 			next = "/"
 		}
-		http.Redirect(w, r, options.AuthCodeURL(newState(), "online", "auto"), http.StatusFound)
+		http.Redirect(w, r, config.AuthCodeURL(next, oauth2.AccessTypeOffline), http.StatusFound)
 		return
 	}
 	// No need to login, redirect to the next page.
@@ -247,21 +246,18 @@ func logout(s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusFound)
 }
 
-func handleOAuth2Callback(options *oauth2.Options, s sessions.Session, w http.ResponseWriter, r *http.Request) {
+func handleOAuth2Callback(opts *Options, config *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	next := extractPath(r.URL.Query().Get("state"))
 	code := r.URL.Query().Get("code")
-
-	t, err := options.NewTransportFromCode(code)
-
+	t, err := config.Exchange(oauth2.NoContext, code)
 	if err != nil {
 		// Pass the error message, or allow dev to provide its own
 		// error handler.
 		http.Redirect(w, r, PathError, http.StatusFound)
 		return
 	}
-
 	// Store the credentials in the session.
-	val, _ := json.Marshal(t.Token())
+	val, _ := json.Marshal(t)
 	s.Set(keyToken, val)
 	http.Redirect(w, r, next, http.StatusFound)
 }
