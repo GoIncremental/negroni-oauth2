@@ -146,6 +146,7 @@ func NewOAuth2Provider(opts *Options, authUrl, tokenUrl string) negroni.HandlerF
 		ClientID:     opts.ClientID,
 		ClientSecret: opts.ClientSecret,
 		Scopes:       opts.Scopes,
+		RedirectURL:  opts.RedirectURL,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  authUrl,
 			TokenURL: tokenUrl,
