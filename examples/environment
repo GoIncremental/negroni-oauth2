@@ -1,0 +1,3 @@
+OAUTH2_CLIENT_ID=replace_with_your_client_id
+OAUTH2_CLIENT_SECRET=replace_with_your_client_secret
+OAUTH2_REDIRECT_URL=replace_with_your_redirect_url
