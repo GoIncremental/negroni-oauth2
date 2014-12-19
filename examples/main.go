@@ -17,13 +17,31 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/codegangsta/negroni"
 	oauth2 "github.com/goincremental/negroni-oauth2"
 	sessions "github.com/goincremental/negroni-sessions"
+	"github.com/joho/godotenv"
 )
 
+func getEnv(key string, defaultValue string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		v = defaultValue
+	}
+	return v
+}
+
 func main() {
+	//Loads environment variables from a .env file
+	godotenv.Load("environment")
+
+	var (
+		clientID     = getEnv("OAUTH2_CLIENT_ID", "client_id")
+		clientSecret = getEnv("OAUTH2_CLIENT_SECRET", "client_secret")
+		redirectURL  = getEnv("OAUTH2_REDIRECT_URL", "redirect_url")
+	)
 
 	secureMux := http.NewServeMux()
 
@@ -42,10 +60,10 @@ func main() {
 
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(oauth2.Google(&oauth2.Options{
-		ClientID:     "client_id",
-		ClientSecret: "client_secret",
-		RedirectURL:  "refresh_url",
+	n.Use(oauth2.Google(&oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  redirectURL,
 		Scopes:       []string{"https://www.googleapis.com/auth/drive"},
 	}))
 

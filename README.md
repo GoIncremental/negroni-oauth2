@@ -40,7 +40,7 @@ func main() {
 
 	n := negroni.New()
 	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	n.Use(oauth2.Google(&oauth2.Options{
+	n.Use(oauth2.Google(&oauth2.Config{
 		ClientID:     "client_id",
 		ClientSecret: "client_secret",
 		RedirectURL:  "refresh_url",
