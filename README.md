@@ -90,6 +90,7 @@ oauth2.PathLogout = "/oauth2logout"
 * [minjatJ](https://github.com/minjatJ)
 * [Thibaut Colar](https://github.com/tcolar)
 * [Matt Bostock](https://github.com/mattbostock)
+* [Deniz Eren](https://github.com/denizeren)
 
 ## Derived from [martini-contrib/oauth2](http://github.com/martini-contrib/oauth2)
 
