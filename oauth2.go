@@ -57,16 +57,16 @@ type Config oauth2.Config
 type Tokens interface {
 	Access() string
 	Refresh() string
-	Expired() bool
+	Valid() bool
 	ExpiryTime() time.Time
-	ExtraData(string) string
+	ExtraData(string) interface{}
 }
 
 type token struct {
 	oauth2.Token
 }
 
-func (t *token) ExtraData(key string) string {
+func (t *token) ExtraData(key string) interface{} {
 	return t.Extra(key)
 }
 
@@ -82,11 +82,11 @@ func (t *token) Refresh() string {
 
 // Returns whether the access token is
 // expired or not.
-func (t *token) Expired() bool {
+func (t *token) Valid() bool {
 	if t == nil {
 		return true
 	}
-	return t.Token.Expired()
+	return t.Token.Valid()
 }
 
 // Returns the expiry time of the user's
@@ -181,7 +181,7 @@ func SetToken(r *http.Request, t interface{}) {
 	tk := unmarshallToken(s)
 	if tk != nil {
 		// check if the access token is expired
-		if tk.Expired() && tk.Refresh() == "" {
+		if !tk.Valid() && tk.Refresh() == "" {
 			s.Delete(keyToken)
 			tk = nil
 		}
@@ -193,7 +193,7 @@ func SetToken(r *http.Request, t interface{}) {
 func LoginRequired() negroni.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 		token := GetToken(r)
-		if token == nil || token.Expired() {
+		if token == nil || !token.Valid() {
 			// Set token to null to avoid redirection loop
 			SetToken(r, nil)
 			next := url.QueryEscape(r.URL.RequestURI())
