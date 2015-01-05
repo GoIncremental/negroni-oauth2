@@ -26,12 +26,13 @@ import (
 
 	"github.com/codegangsta/negroni"
 	sessions "github.com/goincremental/negroni-sessions"
+	"github.com/goincremental/negroni-sessions/cookiestore"
 )
 
 func Test_LoginRedirect(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.New()
-	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
+	n.Use(sessions.Sessions("my_session", cookiestore.New([]byte("secret123"))))
 	n.Use(Google(&Config{
 		ClientID:     "client_id",
 		ClientSecret: "client_secret",
@@ -55,7 +56,7 @@ func Test_LoginRedirect(t *testing.T) {
 func Test_LoginRedirectAfterLoginRequired(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.New()
-	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
+	n.Use(sessions.Sessions("my_session", cookiestore.New([]byte("secret123"))))
 	n.Use(Google(&Config{
 		ClientID:     "client_id",
 		ClientSecret: "client_secret",
@@ -88,7 +89,7 @@ func Test_LoginRedirectAfterLoginRequired(t *testing.T) {
 
 func Test_Logout(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	s := sessions.NewCookieStore([]byte("secret123"))
+	s := cookiestore.New([]byte("secret123"))
 
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", s))
@@ -127,7 +128,7 @@ func Test_Logout(t *testing.T) {
 
 func Test_LogoutOnAccessTokenExpiration(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	s := sessions.NewCookieStore([]byte("secret123"))
+	s := cookiestore.New([]byte("secret123"))
 
 	n := negroni.Classic()
 	n.Use(sessions.Sessions("my_session", s))
@@ -159,7 +160,7 @@ func Test_LogoutOnAccessTokenExpiration(t *testing.T) {
 func Test_LoginRequired(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	n := negroni.Classic()
-	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
+	n.Use(sessions.Sessions("my_session", cookiestore.New([]byte("secret123"))))
 	n.Use(Google(&Config{
 		ClientID:     "foo",
 		ClientSecret: "foo",

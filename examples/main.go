@@ -22,6 +22,7 @@ import (
 	"github.com/codegangsta/negroni"
 	oauth2 "github.com/goincremental/negroni-oauth2"
 	sessions "github.com/goincremental/negroni-sessions"
+	"github.com/goincremental/negroni-sessions/cookiestore"
 	"github.com/joho/godotenv"
 )
 
@@ -59,7 +60,7 @@ func main() {
 	secure.UseHandler(secureMux)
 
 	n := negroni.New()
-	n.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
+	n.Use(sessions.Sessions("my_session", cookiestore.New([]byte("secret123"))))
 	n.Use(oauth2.Google(&oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
