@@ -28,7 +28,7 @@ import (
 
 	"github.com/codegangsta/negroni"
 	sessions "github.com/goincremental/negroni-sessions"
-	"github.com/golang/oauth2"
+	"golang.org/x/oauth2"
 )
 
 const (
