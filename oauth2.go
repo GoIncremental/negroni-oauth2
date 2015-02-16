@@ -60,7 +60,10 @@ type Tokens interface {
 	Valid() bool
 	ExpiryTime() time.Time
 	ExtraData(string) interface{}
+	Get() Token
 }
+
+type Token oauth2.Token
 
 type token struct {
 	oauth2.Token
@@ -98,6 +101,11 @@ func (t *token) ExpiryTime() time.Time {
 // String returns the string representation of the token.
 func (t *token) String() string {
 	return fmt.Sprintf("tokens: %v", t)
+}
+
+// Returns oauth2.Token.
+func (t *token) Get() Token {
+	return (Token)(t.Token)
 }
 
 // Returns a new Google OAuth 2.0 backend endpoint.
