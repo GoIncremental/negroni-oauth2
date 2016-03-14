@@ -249,19 +249,16 @@ func logout(s sessions.Session, w http.ResponseWriter, r *http.Request) {
 
 func handleOAuth2Callback(config *oauth2.Config, s sessions.Session, w http.ResponseWriter, r *http.Request) {
 	providedState := extractPath(r.URL.Query().Get("state"))
-	fmt.Printf("Got state from request %s\n", providedState)
 
 	//verify that the provided state is the state we generated
 	//if it is not, then redirect to the error page
 	originalState := s.Get(keyState)
-	fmt.Printf("Got state from session %s\n", originalState)
 	if providedState != originalState {
 		http.Redirect(w, r, PathError, http.StatusFound)
 		return
 	}
 
 	next := s.Get(keyNextPage).(string)
-	fmt.Printf("Got a next page from the session: %s\n", next)
 	code := r.URL.Query().Get("code")
 	t, err := config.Exchange(oauth2.NoContext, code)
 	if err != nil {
