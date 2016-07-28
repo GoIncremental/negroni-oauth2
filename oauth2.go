@@ -26,8 +26,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/codegangsta/negroni"
 	sessions "github.com/goincremental/negroni-sessions"
+	"github.com/urfave/negroni"
 	"golang.org/x/oauth2"
 )
 

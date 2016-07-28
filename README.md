@@ -16,10 +16,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/codegangsta/negroni"
 	oauth2 "github.com/goincremental/negroni-oauth2"
 	sessions "github.com/goincremental/negroni-sessions"
 	"github.com/goincremental/negroni-sessions/cookiestore"
+	"github.com/urfave/negroni"
 )
 
 func main() {
