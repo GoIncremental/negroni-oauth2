@@ -19,11 +19,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/codegangsta/negroni"
 	oauth2 "github.com/goincremental/negroni-oauth2"
 	sessions "github.com/goincremental/negroni-sessions"
 	"github.com/goincremental/negroni-sessions/cookiestore"
 	"github.com/joho/godotenv"
+	"github.com/urfave/negroni"
 )
 
 func getEnv(key string, defaultValue string) string {

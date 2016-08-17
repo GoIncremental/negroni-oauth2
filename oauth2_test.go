@@ -24,9 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codegangsta/negroni"
 	sessions "github.com/goincremental/negroni-sessions"
 	"github.com/goincremental/negroni-sessions/cookiestore"
+	"github.com/urfave/negroni"
 )
 
 func Test_LoginRedirect(t *testing.T) {
